@@ -1,4 +1,4 @@
-# Fluent::Plugin::ParseCookie, a plugin for [Fluentd](http://fluentd.org)
+## Fluent::Plugin::ParseCookie, a plugin for [Fluentd](http://fluentd.org)
 
 Fluentd plugin to parse cookie log.
 
@@ -47,7 +47,7 @@ change tag prefix (default tag prefix is "parsed_cookie.")
   type parse_cookie
   key  cookie
   tag_prefix changed.
-  
+
 </match>
 
 input
@@ -152,11 +152,11 @@ You must be this option setting true.
 Default value is false.
 
 ## Change log
-See [CHANGELOG.md](https://github.com/[my-github-username]/fluent-plugin-parse_cookie/blob/master/CHANGELOG.md) for details.
+See [CHANGELOG.md](https://github.com/h-michael-z/fluent-plugin-parse_cookie/blob/master/CHANGELOG.md) for details.
 
 ## Contributing
 
-1. Fork it ( https://github.com/[my-github-username]/fluent-plugin-parse_cookie/fork )
+1. Fork it ( https://github.com/h-michael-z/fluent-plugin-parse_cookie/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
