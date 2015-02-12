@@ -9,7 +9,7 @@ module Fluent
 
     def initialize
       super
-      require 'CGI'
+      require 'cgi'
     end
 
 	  # Define `log` method for v0.10.42 or earlier
@@ -47,10 +47,10 @@ module Fluent
       if record[key]
         parsed_cookie = CGI::Cookie.parse(record[key])
         hash = {}
-        parsed_cookie.each do |k,array| 
+        parsed_cookie.each do |k,array|
           hash.merge!({k => array.select {|v| v.class == String }})
         end
-        
+
         hash = hash.select {|k, v| v != []} if remove_empty_array == true
 
         if single_value_to_string == true
