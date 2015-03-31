@@ -127,6 +127,31 @@ output
       "array": ["123", "abc", "1a2b"]
     }
 ```
+
+If you want create key with parsed data.
+```
+<match foo.**>
+  type           parse_cookie
+  key            cookie
+  sub_key        cookie_parsed
+</match>
+
+input
+"test" {
+  "cookie": "foo=baz; empty=; array=123; array=abc; array=1a2b"
+}
+
+output
+    "parsed_cookie.test" {
+      "cookie": "foo=baz; empty=; array=123; array=abc; array=1a2b",
+      "cookie_parsed": {
+        "foo": ["baz"],
+        "empty": [],
+        "array": ["123", "abc", "1a2b"]
+      }
+    }
+```
+
 ## Option Parameters
 
 ### key :String
@@ -149,6 +174,10 @@ Default value is false.
 ### remove_cookie :Bool
 You want to remove cookie.
 You must be this option setting true.
+Default value is false.
+
+### sub_key :String
+You want to put parsed data into separate key.
 Default value is false.
 
 ## Change log
