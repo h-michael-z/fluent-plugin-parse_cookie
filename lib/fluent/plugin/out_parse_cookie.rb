@@ -6,6 +6,7 @@ module Fluent
     config_param :remove_empty_array,     :bool, :default => false
     config_param :single_value_to_string, :bool, :default => false
     config_param :remove_cookie,          :bool, :default => false
+    config_param :sub_key,                :string, :default => nil
 
     def initialize
       super
@@ -60,7 +61,11 @@ module Fluent
             end
           end
         end
-        record.merge!(hash)
+
+        target = sub_key ? (record[sub_key] ||= {}) : record
+
+        target.merge!(hash)
+        
         record.delete(key) if remove_cookie
       end
       return record

@@ -170,4 +170,28 @@ class ParseCookieOutputTest < Test::Unit::TestCase
       assert_equal COOKIE,     record['cookie']
     end
   end
+
+  def test_sub_key
+    conf = %[
+      key                     cookie
+      sub_key                 cookie_parsed
+      remove_empty_array      true
+      single_value_to_string  true
+    ]
+
+    record = {
+      'cookie' => COOKIE,
+    }
+
+    emits = emit(conf, record)
+
+    emits.each_with_index do |(tag, time, record), i|
+      assert_equal 'parsed_cookie.test',              tag
+      assert_equal 'tmp',       record['cookie_parsed']['temporary']
+      assert_equal nil,            record['cookie_parsed']['empty']
+      assert_equal 'miahcel',     record['cookie_parsed']['__test']
+      assert_equal ['123', 'abc', '1a2b'],     record['cookie_parsed']['array']
+      assert_equal COOKIE,     record['cookie']
+    end
+  end
 end
