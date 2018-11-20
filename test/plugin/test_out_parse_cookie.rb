@@ -2,189 +2,182 @@ require 'helper'
 require 'rr'
 require 'pry-byebug'
 require 'fluent/plugin/out_parse_cookie'
+require 'fluent/test/driver/output'
+require 'fluent/test/helpers'
 
 class ParseCookieOutputTest < Test::Unit::TestCase
+  include Fluent::Test::Helpers
+
   COOKIE = 'temporary=tmp; empty=; __test=miahcel; array=123; array=abc; array=1a2b'.freeze
+
+  def create_driver(conf)
+    Fluent::Test::Driver::Output.new(Fluent::Plugin::ParseCookieOutput).configure(conf)
+  end
 
   def setup
     Fluent::Test.setup
   end
 
-  def create_driver(conf, tag)
-    Fluent::Test::OutputTestDriver.new(
-      Fluent::ParseCookieOutput, tag
-    ).configure(conf)
-  end
+  sub_test_case 'configure' do
+    test 'configure' do
+      d = create_driver(%(
+        key cookie
+      ))
 
-  def emit(conf, record, tag = 'test')
-    d = create_driver(conf, tag)
-    d.run { d.emit(record) }
-    d.emits
-  end
-
-  def test_configure
-    d = create_driver(%(
-      key                cookie
-    ), 'test')
-
-    assert_equal 'cookie',          d.instance.key
-    assert_equal 'parsed_cookie.',  d.instance.tag_prefix
-    assert_equal false,             d.instance.remove_empty_array
-  end
-
-  def test_parse_cookie
-    conf = %(
-      key            cookie
-    )
-
-    record = {
-      'cookie' => COOKIE
-    }
-
-    emits = emit(conf, record)
-
-    emits.each_with_index do |(tag, _time, emit_record), _i|
-      assert_equal 'parsed_cookie.test',                     tag
-      assert_equal ['tmp'],                                  emit_record['temporary']
-      assert_equal [],                                       emit_record['empty']
-      assert_equal ['miahcel'],                              emit_record['__test']
-      assert_equal %w[123 abc 1a2b], emit_record['array']
-      assert_equal COOKIE, emit_record['cookie']
+      assert_equal 'cookie',          d.instance.key
+      assert_equal 'parsed_cookie.',  d.instance.tag_prefix
+      assert_equal false,             d.instance.remove_empty_array
     end
   end
 
-  def test_delete_cookie
-    conf = %(
-      key            cookie
-      remove_cookie  true
-    )
+  sub_test_case 'emit events' do
+    test 'parse_cookie' do
+      d = create_driver(%(
+        key cookie
+      ))
+      time = event_time
 
-    record = {
-      'cookie' => COOKIE
-    }
+      d.run(default_tag: 'test') do
+        d.feed(time, { 'cookie' => COOKIE })
+      end
+      events = d.events
+      event = events.first
 
-    emits = emit(conf, record)
-
-    emits.each_with_index do |(tag, _time, emit_record), _i|
-      assert_equal 'parsed_cookie.test', tag
-      assert_equal ['tmp'],       emit_record['temporary']
-      assert_equal [],            emit_record['empty']
-      assert_equal ['miahcel'], emit_record['__test']
-      assert_equal %w[123 abc 1a2b], emit_record['array']
-      assert_equal nil, emit_record['cookie']
+      assert_equal 'parsed_cookie.test', event.first
+      assert_equal ['tmp'],              event[2]['temporary']
+      assert_equal [],                   event[2]['empty']
+      assert_equal ['miahcel'],          event[2]['__test']
+      assert_equal %w[123 abc 1a2b],     event[2]['array']
+      assert_equal COOKIE,               event[2]['cookie']
     end
-  end
 
-  def test_add_tag_prefix
-    conf = %(
-      key            cookie
-      tag_prefix     add_tag.
-    )
+    test 'delete_cookie' do
+      d = create_driver(%(
+        key cookie
+        remove_cookie true
+      ))
+      time = event_time
 
-    record = {
-      'cookie' => COOKIE
-    }
+      d.run(default_tag: 'test') do
+        d.feed(time, { 'cookie' => COOKIE })
+      end
+      events = d.events
+      event = events.first
 
-    emits = emit(conf, record)
-
-    emits.each_with_index do |(tag, _time, emit_record), _i|
-      assert_equal 'add_tag.test', tag
-      assert_equal ['tmp'],       emit_record['temporary']
-      assert_equal [],            emit_record['empty']
-      assert_equal ['miahcel'], emit_record['__test']
-      assert_equal %w[123 abc 1a2b], emit_record['array']
-      assert_equal COOKIE, emit_record['cookie']
+      assert_equal 'parsed_cookie.test', event.first
+      assert_equal ['tmp'],              event[2]['temporary']
+      assert_equal [],                   event[2]['empty']
+      assert_equal ['miahcel'],          event[2]['__test']
+      assert_equal %w[123 abc 1a2b],     event[2]['array']
+      assert_equal nil,                  event[2]['cookie']
     end
-  end
 
-  def test_remove_empty_array
-    conf = %(
-      key                 cookie
-      remove_empty_array  true
-    )
+    test 'add_tag_prefix' do
+      d = create_driver(%(
+        key cookie
+        tag_prefix add_tag.
+      ))
+      time = event_time
 
-    record = {
-      'cookie' => COOKIE
-    }
+      d.run(default_tag: 'test') do
+        d.feed(time, { 'cookie' => COOKIE })
+      end
+      events = d.events
+      event = events.first
 
-    emits = emit(conf, record)
-
-    emits.each_with_index do |(tag, _time, emit_record), _i|
-      assert_equal 'parsed_cookie.test', tag
-      assert_equal ['tmp'], emit_record['temporary']
-      assert_equal nil, emit_record['empty']
-      assert_equal ['miahcel'], emit_record['__test']
-      assert_equal %w[123 abc 1a2b], emit_record['array']
-      assert_equal COOKIE, emit_record['cookie']
+      assert_equal 'add_tag.test', event.first
+      assert_equal ['tmp'],              event[2]['temporary']
+      assert_equal [],                   event[2]['empty']
+      assert_equal ['miahcel'],          event[2]['__test']
+      assert_equal %w[123 abc 1a2b],     event[2]['array']
+      assert_equal COOKIE,               event[2]['cookie']
     end
-  end
 
-  def test_single_value_to_string
-    conf = %(
-      key                     cookie
-      single_value_to_string  true
-    )
+    test 'remove_empty_array' do
+      d = create_driver(%(
+        key cookie
+        remove_empty_array
+      ))
+      time = event_time
 
-    record = {
-      'cookie' => COOKIE
-    }
+      d.run(default_tag: 'test') do
+        d.feed(time, { 'cookie' => COOKIE })
+      end
+      events = d.events
+      event = events.first
 
-    emits = emit(conf, record)
-
-    emits.each_with_index do |(tag, _time, emit_record), _i|
-      assert_equal 'parsed_cookie.test', tag
-      assert_equal 'tmp', emit_record['temporary']
-      assert_equal [],            emit_record['empty']
-      assert_equal 'miahcel',     emit_record['__test']
-      assert_equal %w[123 abc 1a2b], emit_record['array']
-      assert_equal COOKIE, emit_record['cookie']
+      assert_equal 'parsed_cookie.test', event.first
+      assert_equal ['tmp'],              event[2]['temporary']
+      assert_equal nil,                  event[2]['empty']
+      assert_equal ['miahcel'],          event[2]['__test']
+      assert_equal %w[123 abc 1a2b],     event[2]['array']
+      assert_equal COOKIE,               event[2]['cookie']
     end
-  end
 
-  def test_remove_empty_array_single_value_to_string
-    conf = %(
-      key                     cookie
-      remove_empty_array      true
-      single_value_to_string  true
-    )
+    test 'single_value_to_string' do
+      d = create_driver(%(
+        key cookie
+        single_value_to_string true
+      ))
+      time = event_time
 
-    record = {
-      'cookie' => COOKIE
-    }
+      d.run(default_tag: 'test') do
+        d.feed(time, { 'cookie' => COOKIE })
+      end
+      events = d.events
+      event = events.first
 
-    emits = emit(conf, record)
-
-    emits.each_with_index do |(tag, _time, emit_record), _i|
-      assert_equal 'parsed_cookie.test', tag
-      assert_equal 'tmp', emit_record['temporary']
-      assert_equal nil, emit_record['empty']
-      assert_equal 'miahcel', emit_record['__test']
-      assert_equal %w[123 abc 1a2b], emit_record['array']
-      assert_equal COOKIE, emit_record['cookie']
+      assert_equal 'parsed_cookie.test', event.first
+      assert_equal 'tmp',                event[2]['temporary']
+      assert_equal [],                   event[2]['empty']
+      assert_equal 'miahcel',            event[2]['__test']
+      assert_equal %w[123 abc 1a2b],     event[2]['array']
+      assert_equal COOKIE,               event[2]['cookie']
     end
-  end
 
-  def test_sub_key
-    conf = %(
-      key                     cookie
-      sub_key                 cookie_parsed
-      remove_empty_array      true
-      single_value_to_string  true
-    )
+    test 'remove_empty_array_single_value_to_string' do
+      d = create_driver(%(
+        key cookie
+        remove_empty_array true
+        single_value_to_string true
+      ))
+      time = event_time
 
-    record = {
-      'cookie' => COOKIE
-    }
+      d.run(default_tag: 'test') do
+        d.feed(time, { 'cookie' => COOKIE })
+      end
+      events = d.events
+      event = events.first
 
-    emits = emit(conf, record)
+      assert_equal 'parsed_cookie.test', event.first
+      assert_equal 'tmp',                event[2]['temporary']
+      assert_equal nil,                  event[2]['empty']
+      assert_equal 'miahcel',            event[2]['__test']
+      assert_equal %w[123 abc 1a2b],     event[2]['array']
+      assert_equal COOKIE,               event[2]['cookie']
+    end
 
-    emits.each_with_index do |(tag, _time, emit_record), _i|
-      assert_equal 'parsed_cookie.test', tag
-      assert_equal 'tmp', emit_record['cookie_parsed']['temporary']
-      assert_equal nil, emit_record['cookie_parsed']['empty']
-      assert_equal 'miahcel', emit_record['cookie_parsed']['__test']
-      assert_equal %w[123 abc 1a2b], emit_record['cookie_parsed']['array']
-      assert_equal COOKIE, emit_record['cookie']
+    test 'sub_key' do
+      d = create_driver(%(
+        key cookie
+        sub_key cookie_parsed
+        remove_empty_array true
+        single_value_to_string true
+      ))
+      time = event_time
+
+      d.run(default_tag: 'test') do
+        d.feed(time, { 'cookie' => COOKIE })
+      end
+      events = d.events
+      event = events.first
+
+      assert_equal 'parsed_cookie.test', event.first
+      assert_equal 'tmp',                event[2]['cookie_parsed']['temporary']
+      assert_equal nil,                  event[2]['cookie_parsed']['empty']
+      assert_equal 'miahcel',            event[2]['cookie_parsed']['__test']
+      assert_equal %w[123 abc 1a2b],     event[2]['cookie_parsed']['array']
+      assert_equal COOKIE,               event[2]['cookie']
     end
   end
 end
