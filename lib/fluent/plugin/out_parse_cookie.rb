@@ -35,7 +35,7 @@ module Fluent
 
         t = @tag_prefix + t unless @tag_prefix.nil?
 
-        Engine.emit(t, time, new_record)
+        router.emit(t, time, new_record)
       end
       chain.next
     rescue StandardError => e
