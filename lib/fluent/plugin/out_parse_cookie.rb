@@ -1,5 +1,7 @@
-module Fluent
-  class ParseCookieOutput < Output
+require 'fluent/plugin/output'
+
+module Fluent::Plugin
+  class ParseCookieOutput < Fluent::Plugin::Output
     Fluent::Plugin.register_output('parse_cookie', self)
     config_param :key, :string
     config_param :tag_prefix,             :string, default: 'parsed_cookie.'
@@ -7,6 +9,8 @@ module Fluent
     config_param :single_value_to_string, :bool, default: false
     config_param :remove_cookie,          :bool, default: false
     config_param :sub_key,                :string, default: nil
+
+    helpers :event_emitter
 
     def initialize
       super
@@ -28,21 +32,20 @@ module Fluent
       super
     end
 
-    def emit(tag, es, chain)
+    def process(tag, es)
       es.each do |time, record|
         t = tag.dup
-        new_record = parse_cookie(record)
+        new_record = parse_cookie(record, tag)
 
         t = @tag_prefix + t unless @tag_prefix.nil?
 
-        Engine.emit(t, time, new_record)
+        router.emit(t, time, new_record)
       end
-      chain.next
     rescue StandardError => e
       log.warn("out_parse_cookie: error_class:#{e.class} error_message:#{e.message} tag:#{tag} es:#{es} bactrace:#{e.backtrace.first}")
     end
 
-    def parse_cookie(record)
+    def parse_cookie(record, tag)
       if record[key]
         parsed_cookie = CGI::Cookie.parse(record[key])
         hash = {}
