@@ -32,6 +32,10 @@ module Fluent::Plugin
       super
     end
 
+    def multi_workers_ready?
+      true
+    end
+
     def process(tag, es)
       es.each do |time, record|
         t = tag.dup
