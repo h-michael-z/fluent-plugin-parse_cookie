@@ -1,4 +1,5 @@
 ## Fluent::Plugin::ParseCookie, a plugin for [Fluentd](http://fluentd.org)
+[![Build Status](https://travis-ci.org/h-michael/fluent-plugin-parse_cookie.svg?branch=master)](https://travis-ci.org/h-michael/fluent-plugin-parse_cookie)
 
 Fluentd plugin to parse cookie log.
 
